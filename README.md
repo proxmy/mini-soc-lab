@@ -182,7 +182,17 @@ This alert monitors high CPU usage on the SOC server.
 
 ## ▶️ How to Run
 
-```bash
+```bash```
 git clone https://github.com/your-username/mini-soc-lab.git
 cd mini-soc-lab
 docker compose up -d
+
+
+## 🚀 First Run
+
+For a quick start:
+
+```bash```
+chmod +x scripts/first-run.sh
+./scripts/first-run.sh
+
