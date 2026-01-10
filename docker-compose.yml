@@ -33,8 +33,9 @@ services:
       - "--storage.tsdb.retention.time=15d"
       - "--web.enable-lifecycle"
     volumes:
-      - prometheus_data:/prometheus
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - /var/log:/var/log:ro
+      - suricata_logs:/var/log/suricata:ro
+      - ./promtail/promtail-config.yml:/etc/promtail/config.yml:ro
     networks:
       - soc
 
