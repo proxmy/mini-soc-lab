@@ -19,12 +19,13 @@ The entire stack is deployed using **Docker Compose**, featuring an **internal "
 
 ## 🧱 Architecture
 
-*(Diagram removed for compatibility)*
+The architecture consists of three main components working in unison:
 
-The architecture consists of three main components:
-1.  **Offensive Stack:** An attacker container generating Nmap scans, LFI attacks, and noise.
-2.  **Defensive Stack:** Suricata and Zeek analyzing traffic; Promtail shipping logs to Loki; Node Exporter sending metrics to Prometheus.
-3.  **Visualization:** Grafana displaying dashboards and sending alerts to Discord.
+1.  **Offensive Stack:** An internal attacker container generating Nmap scans, LFI attacks, and noise.
+2.  **Defensive Stack:** * **Suricata & Zeek:** Analyze traffic via traffic mirroring.
+    * **Promtail:** Ships logs to Loki.
+    * **Node Exporter:** Sends system metrics to Prometheus.
+3.  **Visualization:** Grafana displays dashboards and sends alerts via Discord Webhooks.
 
 ### 🎯 Key Objectives
 * **Realistic Simulation:** Centralize metrics, logs, and alerts in a single pane of glass.
@@ -50,6 +51,7 @@ You don't need complex external VMs to test this. The lab comes with an auto-att
     ```
 
 3.  **Wait ~30 seconds** for the services to initialize.
+
 4.  **Access Grafana:**
     * **URL:** `http://localhost:3000`
     * **User:** `admin`
