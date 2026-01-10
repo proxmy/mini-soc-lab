@@ -18,3 +18,12 @@ scrape_configs:
           host: soc-server
           __path__: /var/log/**/*.log
 
+  - job_name: suricata
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: suricata
+          host: soc-server
+          __path__: /var/log/suricata/*.log
+
