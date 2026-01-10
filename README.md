@@ -320,3 +320,21 @@ mini-soc-lab/
 
 This lab is for educational and defensive purposes only.
 All testing is performed in an isolated environment under the user's control.
+
+---
+
+## 🗺️ MITRE ATT&CK & Detection Mapping
+
+This lab now includes an automated traffic generator and Zeek for metadata analysis.
+
+| Component | Function | MITRE Mapping |
+| :--- | :--- | :--- |
+| **Attacker Container** | Simulates noise and attacks automatically. | **T1046** (Network Service Scanning), **T1190** (Exploit Public-Facing App) |
+| **Suricata** | Signature-based Intrusion Detection. | Detects the generated Nmap scans and LFI attempts via ET Open Rules. |
+| **Zeek** | Network Security Monitor (Metadata). | Provides deep visibility into **T1071** (Application Layer Protocol) flows. |
+
+### 🚀 New "Out of the Box" Experience
+You no longer need an external VM to see alerts.
+1. Run `docker compose up -d`
+2. The `attacker` container will start generating traffic after 20 seconds.
+3. Check Grafana to see real-time alerts from Suricata and logs from Zeek.
