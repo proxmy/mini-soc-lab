@@ -19,8 +19,9 @@ The entire stack is deployed using **Docker Compose**, featuring an **internal "
 
 ## 🧱 Architecture
 
-```mermaid```
+```mermaid
 graph TD
+...
     subgraph "Offensive Stack"
       A[👾 Attacker Container] -->|Nmap / LFI / Noise| B(Bridge Network)
     end
