@@ -27,3 +27,11 @@ scrape_configs:
           host: soc-server
           __path__: /var/log/suricata/*.log
 
+  - job_name: suricata-eve
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: suricata_eve
+          host: soc-server
+          __path__: /var/log/suricata/eve.json
