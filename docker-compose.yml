@@ -1,110 +1,110 @@
+version: "3.8"
+
 services:
-  grafana:
-    image: grafana/grafana:11.1.0
-    container_name: grafana
-    restart: unless-stopped
-    depends_on:
-      - prometheus
-      - loki
-    ports:
-      - "3000:3000"
-    environment:
-      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER}
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
-      - GF_USERS_ALLOW_SIGN_UP=false
-      # Provisioning (datasources + dashboards)
-      - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
-    volumes:
-      - grafana_data:/var/lib/grafana
-      - ./grafana/provisioning:/etc/grafana/provisioning:ro
-      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
-    networks:
-      - soc
-
-  prometheus:
-    image: prom/prometheus:v2.54.1
-    container_name: prometheus
-    restart: unless-stopped
-    ports:
-      - "9090:9090"
-    command:
-      - "--config.file=/etc/prometheus/prometheus.yml"
-      - "--storage.tsdb.path=/prometheus"
-      - "--storage.tsdb.retention.time=15d"
-      - "--web.enable-lifecycle"
-    volumes:
-      - /var/log:/var/log:ro
-      - suricata_logs:/var/log/suricata:ro
-      - ./promtail/promtail-config.yml:/etc/promtail/config.yml:ro
-    networks:
-      - soc
-
-  node-exporter:
-    image: prom/node-exporter:v1.8.2
-    container_name: node-exporter
-    restart: unless-stopped
-    ports:
-      - "9100:9100"
-    pid: host
-    command:
-      - "--path.rootfs=/host"
-    volumes:
-      - /:/host:ro,rslave
-    networks:
-      - soc
-
-  loki:
-    image: grafana/loki:3.2.0
-    container_name: loki
-    restart: unless-stopped
-    ports:
-      - "3100:3100"
-    command: ["-config.file=/etc/loki/config.yml"]
-    volumes:
-      - loki_data:/loki
-      - ./loki/loki-config.yml:/etc/loki/config.yml:ro
-    networks:
-      - soc
-
-  promtail:
-    image: grafana/promtail:3.2.0
-    container_name: promtail
-    restart: unless-stopped
-    depends_on:
-      - loki
-    command: ["-config.file=/etc/promtail/config.yml"]
-    volumes:
-      - /var/log:/var/log:ro
-      - ./promtail/promtail-config.yml:/etc/promtail/config.yml:ro
-    networks:
-      - soc
-
-  # Suricata como IDS (modo defensivo). Recomendado en VM Linux.
-  # Nota: usamos network_mode: host para capturar tráfico real de la VM.
+  # --- SEGURIDAD (IDS/NSM) ---
   suricata:
-    image: jasonish/suricata:7.0.7
-    container_name: suricata
-    restart: unless-stopped
-    network_mode: host
+    build: ./suricata
+    container_name: soc-suricata
+    restart: always
+    cap_add:
+      - NET_ADMIN
+      - SYS_NICE
+      - NET_RAW
+    networks:
+      - soc-net
+    volumes:
+      - ./suricata/suricata.yaml:/etc/suricata/suricata.yaml
+      - ./suricata/rules:/var/lib/suricata/rules
+      - suricata-logs:/var/log/suricata
+
+  zeek:
+    image: zeek/zeek:latest
+    container_name: soc-zeek
+    restart: always
     cap_add:
       - NET_ADMIN
       - NET_RAW
-      - SYS_NICE
+    networks:
+      - soc-net
     volumes:
-      - ./suricata/suricata.yaml:/etc/suricata/suricata.yaml:ro
-      - ./suricata/rules:/var/lib/suricata/rules:ro
-      - suricata_logs:/var/log/suricata
+      - ./zeek/local.zeek:/usr/local/zeek/share/zeek/site/local.zeek
+      - zeek-logs:/usr/local/zeek/logs
+    command: zeek -C -i eth0 local
+
+  # --- ATACANTE (GENERADOR DE TRÁFICO) ---
+  attacker:
+    build: ./traffic-generator
+    container_name: soc-attacker
+    restart: unless-stopped
+    networks:
+      - soc-net
+    depends_on:
+      - suricata
+      - grafana
+
+  # --- LOGGING & VISUALIZACIÓN ---
+  promtail:
+    image: grafana/promtail:2.9.2
+    container_name: soc-promtail
+    restart: always
+    networks:
+      - soc-net
+    volumes:
+      - ./promtail/promtail-config.yml:/etc/promtail/config.yml
+      - suricata-logs:/var/log/suricata
+      - zeek-logs:/var/log/zeek
+    command: -config.file=/etc/promtail/config.yml
+
+  loki:
+    image: grafana/loki:2.9.2
+    container_name: soc-loki
+    restart: always
+    networks:
+      - soc-net
+    expose:
+      - "3100"
+    command: -config.file=/etc/loki/local-config.yaml
+
+  grafana:
+    image: grafana/grafana:10.2.2
+    container_name: soc-grafana
+    restart: always
+    networks:
+      - soc-net
+    ports:
+      - "3000:3000"
     environment:
-      - SURICATA_OPTIONS=-i ${SURICATA_INTERFACE}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+    depends_on:
+      - loki
+      - prometheus
+    volumes:
+      - grafana-data:/var/lib/grafana
+      # Si tienes provisionamiento automático:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+
+  prometheus:
+    image: prom/prometheus:v2.48.0
+    container_name: soc-prometheus
+    restart: always
+    networks:
+      - soc-net
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    command: --config.file=/etc/prometheus/prometheus.yml
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: soc-node-exporter
+    restart: always
+    networks:
+      - soc-net
 
 networks:
-  soc:
-    name: soc
+  soc-net:
     driver: bridge
 
 volumes:
-  grafana_data:
-  prometheus_data:
-  loki_data:
-  suricata_logs:
-
+  suricata-logs:
+  zeek-logs:
+  grafana-data:
