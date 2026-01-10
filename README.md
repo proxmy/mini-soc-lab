@@ -58,6 +58,102 @@ The entire stack is deployed using **Docker & Docker Compose**, allowing anyone 
 - **Docker**
 - **Docker Compose**
 
+## 🔔 Alerting (Discord Integration)
+
+This lab includes **real-time alerting** using **Grafana Alerting** with notifications sent to **Discord** via Webhook.
+
+The alerting setup follows standard Grafana alerting workflows and is intentionally kept simple and robust.
+
+---
+
+### 1️⃣ Create Discord Contact Point (one-time setup)
+
+In Grafana UI:
+- Grafana → Alerts & IRM → Alerting → Contact points
+Steps:
+1. Click **Add contact point**
+2. Select **Webhook**
+3. Paste your **Discord Webhook URL**
+4. Name it: `discord-mini-soc`
+5. Click **Save**
+- Grafana → Alert rules → New alert rule
+**Query (Prometheus)**
+```promql```
+100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)
+
+-Condition
+
+--IS ABOVE 85
+--For 2m
+
+-Labels
+
+team="security"
+severity="warning"
+
+-Contact point
+discord-mini-soc
+
+3️⃣ Alert Rule — Security (Suricata LAB Alerts)
+
+This alert fires whenever Suricata detects a LAB event.
+
+Query (Loki)
+
+sum(count_over_time({job="suricata"} |= "[LAB]" [1m]))
+
+
+Condition
+
+IS ABOVE 0
+
+For 0m–1m
+
+Labels
+
+team="security"
+severity="critical"
+
+
+Contact point
+
+discord-mini-soc
+
+4️⃣ Minimal Validation
+
+To validate the alerting pipeline:
+
+From the Client/Test VM, send a ping to the SOC server IP
+→ Suricata should generate a [LAB] ICMP ping alert
+
+In Grafana → Explore (Loki), run:
+
+{job="suricata"}
+
+
+and
+
+{job="suricata_eve"}
+
+
+You should observe:
+
+Suricata log events in Grafana
+
+A Discord notification triggered by the alert rule
+
+This confirms the full pipeline:
+Traffic → Detection → Logs → Dashboard → Alert → Notification
+
+---
+
+### 2️⃣ Alert Rule — Infrastructure (High CPU)
+
+This alert monitors high CPU usage on the SOC server.
+
+**Location**
+
+
 ---
 
 ## ▶️ How to Run
