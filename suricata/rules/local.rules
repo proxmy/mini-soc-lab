@@ -1,1 +1,19 @@
+# -----------------------------
+# MINI SOC LAB - LOCAL RULES
+# -----------------------------
+
+# ICMP ping (útil para comprobar que Suricata ve tráfico)
+alert icmp any any -> $HOME_NET any (msg:"[LAB] ICMP ping to HOME_NET"; itype:8; sid:1000001; rev:1;)
+
+# SSH connection attempts to HOME_NET (ver actividad SSH)
+alert tcp any any -> $HOME_NET 22 (msg:"[LAB] SSH connection attempt to HOME_NET"; flags:S; flow:stateless; sid:1000002; rev:1;)
+
+# HTTP access to DVWA (solo si levantas DVWA o ruta similar en tu lab)
+alert http any any -> $HOME_NET any (msg:"[LAB] HTTP request contains 'dvwa'"; http.uri; content:"dvwa"; nocase; sid:1000003; rev:1;)
+
+# Suspicious user-agent demo (para probar alertas HTTP sin depender de DVWA)
+alert http any any -> $HOME_NET any (msg:"[LAB] HTTP User-Agent contains 'sqlmap'"; http.user_agent; content:"sqlmap"; nocase; sid:1000004; rev:1;)
+
+# Too many SYNs to HOME_NET in short time (detección de patrón tipo scan/noise)
+alert tcp any any -> $HOME_NET any (msg:"[LAB] High rate of SYN to HOME_NET (possible scan/noise)"; flags:S; threshold:type both, track by_src, count 20, seconds 10; sid:1000005; rev:1;)
 
