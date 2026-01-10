@@ -87,6 +87,14 @@ ip -br link
 
 ---
 
+## 🪵 Logging Notes
+
+- Suricata logs (`fast.log` and `eve.json`) are fully collected and visualized
+- Application and file-based system logs are collected via Promtail
+- Journald logs are not collected by default
+
+This lab focuses on **security telemetry**, not full system log ingestion.
+
 ## ▶️ How to Run
 
 ```bash
