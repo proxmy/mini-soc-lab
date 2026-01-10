@@ -1,1 +1,59 @@
+%YAML 1.1
+---
+
+# Interfaz se define por variable de entorno en docker-compose:
+# SURICATA_OPTIONS=-i ${SURICATA_INTERFACE}
+
+vars:
+  address-groups:
+    HOME_NET: "[192.168.0.0/16,10.0.0.0/8,172.16.0.0/12]"
+    EXTERNAL_NET: "!$HOME_NET"
+
+default-rule-path: /var/lib/suricata/rules
+
+rule-files:
+  - local.rules
+
+# Outputs
+outputs:
+  - fast:
+      enabled: yes
+      filename: /var/log/suricata/fast.log
+      append: yes
+
+  - eve-log:
+      enabled: yes
+      filetype: regular
+      filename: /var/log/suricata/eve.json
+      community-id: yes
+      pcap-file: false
+      types:
+        - alert:
+            tagged-packets: no
+        - http:
+            extended: yes
+        - dns
+        - tls
+        - flow
+        - ssh
+
+# Logging (útil para debugging)
+logging:
+  default-log-level: info
+
+# App-layer parsers
+app-layer:
+  protocols:
+    http:
+      enabled: yes
+    tls:
+      enabled: yes
+    dns:
+      enabled: yes
+    ssh:
+      enabled: yes
+
+# Performance (suave)
+threading:
+  set-cpu-affinity: no
 
