@@ -20,6 +20,22 @@ The entire stack is deployed using **Docker & Docker Compose**, allowing the lab
 
 ## 🧱 Architecture
 
+### Recommended VM Network Configuration (Important)
+
+This lab is designed to run inside **virtual machines** using a **dual-network setup**.
+
+#### SOC Server VM
+- **Network Adapter 1:** NAT  
+  - Used for system updates and Docker image downloads
+- **Network Adapter 2:** Host-only / Internal Network  
+  - Used for traffic inspection and IDS monitoring
+
+#### Client/Test VM
+- **Network Adapter 1:** Host-only / Internal Network only  
+  - Used to generate controlled traffic toward the SOC Server
+
+⚠️ Do **not** expose Suricata directly to your home or public network.
+
 ### Lab setup
 - **2 Linux virtual machines**
   - **SOC Server**: runs the monitoring and detection stack
