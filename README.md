@@ -142,8 +142,8 @@ For 2m
 Labels
 
 team="security"
-severity="warning"
 
+severity="warning"
 
 Contact point
 
@@ -165,8 +165,8 @@ For 0m–1m
 Labels
 
 team="security"
-severity="critical"
 
+severity="critical"
 
 Contact point
 
@@ -182,7 +182,7 @@ In Grafana → Explore (Loki), run:
 {job="suricata"}
 
 
-and
+and:
 
 {job="suricata_eve"}
 
@@ -193,8 +193,7 @@ Logs appear in Grafana
 
 A Discord notification is triggered
 
-This validates the full pipeline:
-
+✅ This validates the full pipeline:
 Traffic → Detection → Logs → Dashboard → Alert → Notification
 
 🧪 What This Lab Demonstrates
@@ -228,7 +227,7 @@ Source/destination analysis
 
 ⚠️ Lessons Learned (Real Issues Solved)
 
-This project documents real problems encountered during development and how they were resolved.
+This project documents real problems encountered during development and how they were resolved:
 
 Dashboards disappearing → fixed with persistent volumes
 
