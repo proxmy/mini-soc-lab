@@ -6,23 +6,24 @@ positions:
   filename: /tmp/positions.yaml
 
 clients:
-  - url: http://soc-loki:3100/loki/api/v1/push
+  - url: http://loki:3100/loki/api/v1/push
 
 scrape_configs:
-  # Suricata Logs
   - job_name: suricata
     static_configs:
-      - targets:
-          - localhost
-        labels:
-          job: suricata
-          __path__: /var/log/suricata/eve.json
-
-  # Zeek Logs (NUEVO)
-  - job_name: zeek
-    static_configs:
-      - targets:
-          - localhost
-        labels:
-          job: zeek
-          __path__: /var/log/zeek/*.log
+    - targets:
+        - localhost
+      labels:
+        job: suricata
+        __path__: /var/log/suricata/eve.json
+    pipeline_stages:
+    - json:
+        expressions:
+          event_type: event_type
+          src_ip: src_ip
+          dest_ip: dest_ip
+          alert_severity: alert.severity
+          alert_signature: alert.signature
+    - labels:
+        event_type:
+        severity: alert_severity
