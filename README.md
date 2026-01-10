@@ -49,6 +49,17 @@ This lab is designed to run inside **virtual machines** using a **dual-network s
 - Persistent data via Docker volumes
 - Explicit image versioning (no `latest` tags)
 
+## 🌐 Network Interface Selection (Suricata – Mandatory)
+
+If your SOC Server VM has **multiple network interfaces** (for example NAT + host-only),
+you **must manually select the correct interface** for Suricata.
+
+### Step 1: Identify interfaces
+Run on the SOC Server VM:
+```bash```
+ip -br link
+
+
 ---
 
 ## 🧰 Technology Stack
