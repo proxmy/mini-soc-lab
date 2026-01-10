@@ -66,3 +66,215 @@ The entire stack is deployed using **Docker & Docker Compose**, allowing the lab
 git clone https://github.com/proxmy/mini-soc-lab.git
 cd mini-soc-lab
 docker compose up -d
+
+Once deployed
+
+Grafana is available at: http://localhost:3000
+
+All dashboards and data sources are auto-provisioned
+
+Metrics, logs and alerts start flowing immediately
+
+📈 Dashboards
+
+The lab includes preconfigured dashboards for:
+
+System Overview
+
+CPU usage
+
+Memory consumption
+
+Disk usage
+
+Network throughput
+
+Security Overview
+
+Suricata alerts by severity
+
+Top source IPs
+
+Alert timelines
+
+Log Analysis
+
+Centralized logs with filters and labels
+
+📸 Screenshots are available in the /docs/screenshots folder.
+
+🔔 Alerting (Discord Integration)
+
+This lab includes real-time alerting using Grafana Alerting, with notifications sent to Discord via Webhook.
+
+1️⃣ Create Discord Contact Point (one-time setup)
+
+In Grafana UI:
+
+Grafana → Alerts & IRM → Alerting → Contact points
+
+
+Steps:
+
+Click Add contact point
+
+Select Webhook
+
+Paste your Discord Webhook URL
+
+Name it: discord-mini-soc
+
+Click Save
+
+2️⃣ Alert Rule — Infrastructure (High CPU)
+
+Query (Prometheus)
+
+100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)
+
+
+Condition
+
+IS ABOVE 85
+
+For 2m
+
+Labels
+
+team="security"
+severity="warning"
+
+
+Contact point
+
+discord-mini-soc
+
+3️⃣ Alert Rule — Security (Suricata LAB Alerts)
+
+Query (Loki)
+
+sum(count_over_time({job="suricata"} |= "[LAB]" [1m]))
+
+
+Condition
+
+IS ABOVE 0
+
+For 0m–1m
+
+Labels
+
+team="security"
+severity="critical"
+
+
+Contact point
+
+discord-mini-soc
+
+4️⃣ Minimal Validation
+
+From the Client/Test VM, send a ping to the SOC server IP
+→ Suricata should generate a [LAB] ICMP ping alert
+
+In Grafana → Explore (Loki), run:
+
+{job="suricata"}
+
+
+and
+
+{job="suricata_eve"}
+
+
+Confirm:
+
+Logs appear in Grafana
+
+A Discord notification is triggered
+
+This validates the full pipeline:
+
+Traffic → Detection → Logs → Dashboard → Alert → Notification
+
+🧪 What This Lab Demonstrates
+🔵 Blue Team / SOC Skills
+
+IDS deployment and tuning
+
+Log centralization
+
+Alert triage and visualization
+
+Event correlation
+
+🛠️ DevOps / SRE Practices
+
+Infrastructure as Code
+
+Service observability
+
+Persistent data management
+
+Reproducible environments
+
+🌐 Networking Concepts
+
+Network isolation
+
+Traffic visibility
+
+Source/destination analysis
+
+⚠️ Lessons Learned (Real Issues Solved)
+
+This project documents real problems encountered during development and how they were resolved.
+
+Dashboards disappearing → fixed with persistent volumes
+
+Services unreachable → Docker network misconfiguration
+
+IDS alerts not firing → incorrect network interface selection
+
+Excessive noise → rule tuning and severity filtering
+
+Logs missing in Grafana → label mismatches in Promtail
+
+Detailed explanations are available in:
+
+docs/troubleshooting.md
+
+📁 Repository Structure
+mini-soc-lab/
+├── docker-compose.yml
+├── README.md
+├── .env.example
+│
+├── docs/
+│   ├── architecture.md
+│   ├── troubleshooting.md
+│   └── screenshots/
+│
+├── grafana/
+├── prometheus/
+├── suricata/
+├── loki/
+├── promtail/
+└── scripts/
+
+🚀 Roadmap
+
+ Add more Suricata rule examples
+
+ Expand alerting conditions
+
+ Improve dashboards with correlations
+
+ Optional ELK stack comparison
+
+ Export dashboards as reusable templates
+
+⚠️ Disclaimer
+
+This lab is for educational and defensive purposes only.
+All testing is performed in an isolated environment under the user's control.
