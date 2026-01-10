@@ -95,6 +95,14 @@ ip -br link
 
 This lab focuses on **security telemetry**, not full system log ingestion.
 
+## 💾 Storage & Retention Notes
+
+- Loki stores log data locally on disk
+- Default retention is suitable for short-lived labs
+- Long-running setups may consume significant disk space
+
+For extended usage, consider reducing retention time or increasing disk size.
+
 ## ▶️ How to Run
 
 ```bash
