@@ -1,14 +1,14 @@
+version: '3.8'
+
 services:
   # ----------------------------------------------------------------
-  # 🛡️ DEFENSIVE STACK (Blue Team)
+  # 🛡️ CAPA DE RED (Suricata)
   # ----------------------------------------------------------------
-  
-  # 1. Suricata IDS - Network Intrusion Detection
   suricata:
     image: jasonish/suricata:latest
     container_name: soc-suricata
     restart: unless-stopped
-    network_mode: "host" # CRÍTICO: Para ver tráfico real de la VM (Host-Only)
+    network_mode: "host" # Ve todo el tráfico de la interfaz real (ens33/eth0)
     cap_add:
       - NET_ADMIN
       - SYS_NICE
@@ -21,28 +21,93 @@ services:
     environment:
       - SURICATA_OPTIONS="-i ${SURICATA_INTERFACE}"
 
-  # 2. Promtail - Log Shipping (Suricata -> Loki)
+  # ----------------------------------------------------------------
+  # 🛡️ CAPA DE APLICACIÓN WEB (WAF - ModSecurity)
+  # ----------------------------------------------------------------
+  waf:
+    image: owasp/modsecurity-crs:nginx
+    container_name: soc-waf
+    restart: unless-stopped
+    ports:
+      - "80:80" # El WAF recibe el tráfico web real
+    environment:
+      - PROXY=1
+      - BACKEND=http://soc-dvwa:80  # Redirige el tráfico limpio a la víctima
+      - PARANOIA=1                  # Nivel de sensibilidad (1=Bajo, 4=Alto)
+      - ANOMALY_INBOUND=5           # Puntuación para bloquear entrada
+      - ANOMALY_OUTBOUND=4          # Puntuación para bloquear salida
+    volumes:
+      - waf_logs:/var/log/modsec    # Compartimos logs con Promtail
+    networks:
+      - soc-net
+    depends_on:
+      - dvwa
+
+  # 🎯 VÍCTIMA WEB (Oculta tras el WAF)
+  dvwa:
+    image: vulnerables/web-dvwa
+    container_name: soc-dvwa
+    restart: unless-stopped
+    # 🛑 SIN "ports". Solo accesible por la red interna
+    networks:
+      - soc-net
+
+  # ----------------------------------------------------------------
+  # 👁️ LOGGING & MONITORING STACK
+  # ----------------------------------------------------------------
+  
+  # Recolector de Logs (Lee Suricata + WAF -> Envía a Loki)
   promtail:
     image: grafana/promtail:latest
     container_name: soc-promtail
     restart: unless-stopped
     volumes:
-      - suricata_logs:/var/log/suricata:ro  # Lee los logs generados por Suricata
+      - suricata_logs:/var/log/suricata:ro  # Lectura logs Suricata
+      - waf_logs:/var/log/modsec:ro         # Lectura logs WAF
       - ./promtail/promtail-config.yml:/etc/promtail/config.yml
     command: -config.file=/etc/promtail/config.yml
     depends_on:
       - loki
 
-  # 3. Loki - Log Aggregation
+  # Almacén de Logs
   loki:
     image: grafana/loki:latest
     container_name: soc-loki
     restart: unless-stopped
     ports:
       - "3100:3100"
+    volumes:
+      - ./loki/loki-config.yaml:/etc/loki/local-config.yaml
     command: -config.file=/etc/loki/local-config.yaml
 
-  # 4. Node Exporter - Host Metrics (CPU/RAM/Net)
+  # Visualización
+  grafana:
+    image: grafana/grafana:latest
+    container_name: soc-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+    volumes:
+      - grafana_data:/var/lib/grafana # Persistencia activada
+    depends_on:
+      - loki
+      - prometheus
+
+  # Métricas de Contenedores y Host
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: soc-prometheus
+    restart: unless-stopped
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    depends_on:
+      - node-exporter
+
   node-exporter:
     image: prom/node-exporter:latest
     container_name: soc-node-exporter
@@ -58,53 +123,20 @@ services:
     ports:
       - "9100:9100"
 
-  # 5. Prometheus - Metrics Collection
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: soc-prometheus
-    restart: unless-stopped
-    volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-    ports:
-      - "9090:9090"
-    depends_on:
-      - node-exporter
-
-  # 6. Grafana - Visualization & Alerting
-  grafana:
-    image: grafana/grafana:latest
-    container_name: soc-grafana
-    restart: unless-stopped
-    ports:
-      - "3000:3000"
-    environment:
-      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
-    volumes:
-      - grafana_data:/var/lib/grafana
-      # Opcional: Descomentar si tienes provisioning automático
-      # - ./grafana/provisioning:/etc/grafana/provisioning
-    depends_on:
-      - loki
-      - prometheus
-
   # ----------------------------------------------------------------
-  # ⚔️ OFFENSIVE STACK (Red Team / Simulation)
+  # ⚔️ ATACANTE (Opcional - Dentro de la red interna o externa)
   # ----------------------------------------------------------------
-  
-  # Attacker - Internal Traffic Generator
   attacker:
-    build: ./traffic-generator  # O usar imagen base: kalilinux/kali-rolling
+    image: kalilinux/kali-rolling
     container_name: soc-attacker
     restart: unless-stopped
-    # Nota: Si usas network_mode: host en Suricata, el atacante puede estar 
-    # en bridge y Suricata lo verá si sale por la interfaz correcta, 
-    # o puedes poner al atacante en una red separada para simular mejor.
+    tty: true  # Mantiene el contenedor encendido
     networks:
       - soc-net
 
 volumes:
   suricata_logs:
+  waf_logs:       # Volumen para logs del WAF
   grafana_data:
 
 networks:
